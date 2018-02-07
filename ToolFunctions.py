@@ -176,8 +176,9 @@ def GetRects(img):
         for j in range(0,height):
             if Exist(colors,i,j):
                 rect = getRect(colors,i,j)
-                if rect.width > 10 and rect.height > 10:
-                    rects.append(rect)
+                rects.append(rect)
+                # if rect.width > 10 and rect.height > 10:
+                #     rects.append(rect)
 
     return rects
 

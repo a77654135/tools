@@ -72,8 +72,10 @@ def main(argv):
 
 
 def ttt():
-    path = os.path.abspath(r"C:\Users\talus\work\moni\sheep\0\aaa.png")
-    dirname = os.path.dirname(path)
+    path = os.path.abspath(r"G:\source\swild-cdn.egret.com\wild\0103\180103115111\resource\animation\mhero\mchangexianzi\mchangexianzi_texture.png")
+    dirname = os.path.join(os.path.dirname(path),os.path.split(path)[1].split(r".")[0])
+    if not os.path.exists(dirname):
+        os.makedirs(dirname)
     img = Image.open(path)
 
     rects = GetRects(img)
@@ -84,5 +86,5 @@ def ttt():
 
 if __name__ == '__main__':
 
-    # ttt()
-    main(sys.argv[1:])
+    ttt()
+    # main(sys.argv[1:])
