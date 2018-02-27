@@ -18,6 +18,7 @@ import logging
 import shutil
 import configparser
 
+from collections import OrderedDict
 from psdTools import *
 from psd_tools import PSDImage,Layer,Group
 from common.ExceptCallStack import print_call_stack
@@ -43,6 +44,12 @@ smartSource = False
 defResFile = ""
 resNameMap = {}
 
+exportJson = False
+minJson = False
+jsonDir = ""
+jsonContent = {}
+curContent = None
+
 
 
 def configParser():
@@ -60,21 +67,30 @@ def configParser():
     global s9File
     global smartSource
     global defResFile
+    global exportJson
+    global minJson
+    global jsonDir
 
     parser = configparser.ConfigParser()
     parser.read("config.ini",encoding="utf-8")
 
     psdDir = os.path.abspath(parser.get("default", "psdDir"))
+
+    generateExml = parser.getboolean("default","generateExml")
     exmlDir = os.path.abspath(parser.get("default", "exmlDir"))
-    imgDir = os.path.abspath(parser.get("default", "imgDir"))
     s9File = os.path.abspath(parser.get("default", "s9File"))
-    defResFile = os.path.abspath(parser.get("default", "defResFile"))
+    replaceFile = parser.getboolean("default","replaceFile")
 
     generateImg = parser.getboolean("default","generateImg")
     generateLabelImg = parser.getboolean("default","generateLabelImg")
-    replaceFile = parser.getboolean("default","replaceFile")
-    generateExml = parser.getboolean("default","generateExml")
+    imgDir = os.path.abspath(parser.get("default", "imgDir"))
+
     smartSource = parser.getboolean("default","smartSource")
+    defResFile = os.path.abspath(parser.get("default", "defResFile"))
+
+    exportJson = parser.getboolean("default", "exportJson")
+    minJson = parser.getboolean("default", "minJson")
+    jsonDir = os.path.abspath(parser.get("default", "jsonDir"))
 
 
 def readS9Info():
@@ -173,10 +189,288 @@ def parsePsd(fromFile,depth):
 
     global generateExml
     global generateImg
+    global exportJson
+
     if generateExml:
         psdToExml(fromFile,depth)
     if generateImg:
         psdToImg(fromFile,depth)
+    if exportJson:
+        psdToJson(fromFile,depth)
+
+def psdToJson(fromFile,depth):
+    """
+    psd转换成json格式
+    :param fromFile:
+    :param depth:
+    :return:
+    """
+    global jsonDir
+    global replaceFile
+    global jsonContent
+    global curContent
+    global minJson
+
+    psdName = os.path.split(fromFile)[1]
+    name = psdName.split(r".")[0]
+
+    toFile = os.path.join(jsonDir, *depth)
+    if not os.path.exists(toFile):
+        os.makedirs(toFile)
+    toFile = os.path.join(toFile, psdName)
+    toFile = toFile.replace(r".psd", r".json")
+
+    if os.path.exists(toFile) and not replaceFile:
+        return
+
+    psd = PSDImage.load(fromFile)
+    jsonContent = OrderedDict()
+    curContent = jsonContent
+
+    curContent["width"] = psd.header.width
+    curContent["height"] = psd.header.height
+    curContent["children"] = []
+
+    layers = psd.layers
+    layers.reverse()
+
+    for layer in layers:
+        if isLayerLocked(layer):
+            continue
+        if isGroup(layer):
+            groupToJson(layer,curContent)
+        else:
+            layerToJson(layer,curContent)
+
+
+    if os.path.exists(toFile):
+        os.unlink(toFile)
+
+    try:
+        with open(toFile, mode="w") as f:
+            if minJson:
+                json.dump(jsonContent, f)
+            else:
+                json.dump(jsonContent, f, indent=4)
+        print u"生成 json 成功：  " + toFile
+    except Exception, e:
+        print u"生成 json 失败：  " + toFile
+
+
+def groupToJson(layer,content):
+    """
+    图层组转换成json对象
+    :param layer:
+    :param curContent:
+    :return:
+    """
+    name = getLayerName(layer)
+    if name.startswith(r"$"):
+        specialGroupToJson(layer, content)
+    else:
+        normalGroupToJson(layer, content)
+
+
+def specialGroupToJson(layer, content):
+    name = layer.name.strip()[1:]
+    if name.startswith("Button"):
+        ButtonGroupToJson(layer, content)
+    elif name.startswith("Bone"):
+        BoneGroupToJson(layer, content)
+    elif name.startswith("Skin"):
+        SkinGroupToJson(layer, content)
+    elif name.startswith("e_") or name.startswith("n_"):
+        CommonGroupToJson(layer, content)
+
+
+def ButtonGroupToJson(layer,content):
+    """
+    Button组
+    :param layer:
+    :param depth:
+    :return:
+    """
+
+    prop = getLayerProp(layer,True)
+    prop["cls"] = "n:BaseButton"
+    prop["children"] = []
+    propProcess(prop)
+    content["children"].append(prop)
+
+    layers = layer.layers
+    layers.reverse()
+
+    for l in layers:
+        if isLayerLocked(l):
+            # 如果锁定了，不解析
+            continue
+        if isGroup(l):
+            name = getLayerName(l)
+            if name.startswith(r"$"):
+                specialGroupToJson(l,prop)
+            else:
+                normalGroupToJson(l,prop)
+        else:
+            layerToJson(l, prop)
+
+
+def BoneGroupToJson(layer,content):
+    """
+    龙骨组
+    :param layer:
+    :param depth:
+    :return:
+    """
+
+    prop = getLayerProp(layer)
+    prop["x"] = 0
+    prop["y"] = 0
+    prop["width"] = "100%"
+    prop["height"] = "100%"
+    prop["cls"] = "e:Group"
+    prop["children"] = []
+    propProcess(prop)
+    content["children"].append(prop)
+
+    layers = layer.layers
+    layers.reverse()
+
+    for l in layers:
+        name = getLayerName(l)
+        name = name.replace(r"_tex","")
+        attr = getLayerCustomProp(l)
+        x,y,_,__ = getLayerSize(l)
+        attr["x"] = x
+        attr["y"] = y
+        attr["name"] = name
+        attr["cls"] = "n:BaseBone"
+        propProcess(attr)
+        prop["children"].append(attr)
+
+
+
+def SkinGroupToJson(layer,content):
+    """
+    psd层
+    :param layer:
+    :param depth:
+    :return:
+    """
+    layers = layer.layers
+    layers.reverse()
+
+    for l in layers:
+        name = getLayerName(l)
+        name += "Skin"
+        prop = getLayerProp(l)
+        if prop.has_key("source"):
+            del prop["source"]
+
+        prop["cls"] = "e:Panel"
+        prop["skinName"] = name
+        propProcess(prop)
+        content["children"].append(prop)
+
+
+def CommonGroupToJson(layer,content):
+    """
+    自定义层
+    :param layer:
+    :param depth:
+    :return:
+    """
+
+    name = getLayerName(layer)
+    prop = getLayerCustomProp(layer)
+
+    if name.startswith("$e_"):
+        name = name.replace(r"$e_","")
+        prop["cls"] = "e:{}".format(name)
+    else:
+        name = name.replace(r"$n_","")
+        prop["cls"] = "n:{}".format(name)
+
+    propProcess(prop)
+    content["children"].append(prop)
+
+
+def normalGroupToJson(group, content):
+    prop = getLayerProp(group)
+    prop["x"] = 0
+    prop["y"] = 0
+    prop["width"] = "100%"
+    prop["height"] = "100%"
+    prop["cls"] = "e:Group"
+    propProcess(prop)
+    content["children"].append(prop)
+
+    layers = group.layers
+    if len(layers):
+        prop["children"] = []
+        for layer in layers:
+            if isLayerLocked(layer):
+                continue
+            if isGroup(layer):
+                groupToJson(layer, prop)
+            else:
+                layerToJson(layer, prop)
+
+
+def layerToJson(layer,content):
+    """
+    图层转换成json对象
+    :param layer:
+    :param curContent:
+    :return:
+    """
+    prop = getLayerProp(layer)
+
+    if isLabel(layer):
+        prop["cls"] = "e:Label"
+    else:
+        prop["cls"] = "e:Image"
+        name = getLayerName(layer)
+        s9Info = s9Map.get(name, None)
+        if s9Info:
+            prop["scale9Grid"] = s9Info
+
+    propProcess(prop)
+    content["children"].append(prop)
+
+
+def propProcess(prop):
+    """
+    属性处理
+    :param prop:
+    :return:
+    """
+    for k, v in prop.iteritems():
+        if v == "true":
+            prop[k] = True
+        if v == "false":
+            prop[k] = False
+        if k == "x":
+            prop[k] = int(v)
+        if k == "y":
+            prop[k] = int(v)
+        if k == "width":
+            val = v
+            if isinstance(val,str) and val.endswith("%"):
+                del prop[k]
+                val = val.replace("%","")
+                prop["percentWidth"] = int(val)
+            else:
+                prop[k] = int(val)
+        if k == "height":
+            val = v
+            if isinstance(val, str) and val.endswith("%"):
+                del prop[k]
+                val = val.replace("%","")
+                prop["percentHeight"] = int(val)
+            else:
+                prop[k] = int(val)
+
+
 
 def psdToExml(fromFile,depth):
     """
@@ -415,7 +709,7 @@ def BoneGroupToExml(layer,depth):
     prefix2 = (depth + 1) * "    "
     for l in layers:
         name = getLayerName(l)
-        name = name.replace(r"_ske","")
+        name = name.replace(r"_tex","")
         attr = getLayerCustomProp(l)
         x,y,_,__ = getLayerSize(l)
 

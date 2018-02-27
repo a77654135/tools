@@ -319,6 +319,7 @@ def getLayerProp(layer,isButton=False):
     """
     获得图层属性
     自定义属性权重高于原始属性
+    这个格式是exml方便使用
     :param layer:
     :return:
     """
@@ -376,6 +377,24 @@ def getLayerProp(layer,isButton=False):
     return ret
 
 
+def getLayerPropJson(layer,isButton=False):
+    """
+    json格式的属性
+    :param layer:
+    :param isButton:
+    :return:
+    """
+    if isGroup(layer):
+        prop = {}
+    else:
+        prop = getLayerProp(layer,isButton)
+
+    #处理
+    for k, v in prop.iteritems():
+        if v == "true":
+            prop[k] = True
+        if v == "false":
+            prop[k] = False
 
 
 
