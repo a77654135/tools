@@ -16,6 +16,8 @@ import configparser
 import os
 import shutil
 import json
+import xml.sax
+import collections
 
 from common.ExceptCallStack import print_call_stack
 from PIL import Image
@@ -25,6 +27,113 @@ toDir = ""
 
 
 
+
+class ExmlHandler( xml.sax.ContentHandler):
+
+    def __init__(self):
+        self.data = collections.OrderedDict()
+        #当前正在解析的节点
+        self.curNode = None
+        #当前解析的借点的父节点
+        self.parentNode = None
+
+        self.depth = []
+
+
+    def characters(self, content):
+        print "characters:  " + content
+
+
+    # 元素开始事件处理
+    def startElement(self, tag, attributes):
+        print "startElement:  " + tag
+
+        for k in dict(attributes):
+            print k,attributes[k]
+
+        # attr = dict(attributes)
+        # if tag.strip() == "e:Skin":
+        #     self.curNode = self.data
+        #     if attr.has_key("width"):
+        #         self.curNode["width"] = int(attr["width"])
+        #     if attr.has_key("height"):
+        #         self.curNode["height"] = int(attr["height"])
+        #     self.curNode["children"] = []
+        #     self.depth.append(self.curNode)
+        # else:
+        #     self.parentNode = self.curNode
+        #     self.curNode = collections.OrderedDict()
+        #     self.parentNode["children"].append(self.curNode)
+        #
+        #     tagList = tag.split(":")
+        #     self.curNode["class"] = tagList[-1]
+        #     if tagList[-1] == "Group":
+        #         self.curNode["children"] = []
+        #         self.depth.append(self.curNode)
+        #     # self.curNode["children"] = []
+        #
+        #     for k in attr:
+        #         if k == "touchEnabled":
+        #             self.curNode["touchEnabled"] = attr[k] == "true"
+        #         elif k == "touchChildren":
+        #             self.curNode["touchChildren"] = attr[k] == "true"
+        #         elif k == "width":
+        #             prop = attr[k]
+        #             if prop.endswith(r"%"):
+        #                 self.curNode["percentWidth"] = int(prop.replace(r"%",""))
+        #             else:
+        #                 self.curNode["width"] = int(prop)
+        #         elif k == "height":
+        #             prop = attr[k]
+        #             if prop.endswith(r"%"):
+        #                 self.curNode["percentHeight"] = int(prop.replace(r"%", ""))
+        #             else:
+        #                 self.curNode["height"] = int(prop)
+        #         elif k == "source":
+        #             prop = attr[k]
+        #             # propList = prop.split(r".")
+        #             # if len(propList) > 1:
+        #             #     self.curNode["source"] = propList[-1]
+        #             # else:
+        #             #     self.curNode["source"] = prop
+        #             self.curNode["source"] = prop
+        #         elif k == "x":
+        #             self.curNode["x"] = int(attr[k])
+        #         elif k == "y":
+        #             self.curNode["y"] = int(attr[k])
+        #         elif k == "alpha":
+        #             self.curNode["alpha"] = float(attr[k])
+        #         else:
+        #             self.curNode[k] = attr[k]
+
+
+
+
+    # 元素结束事件处理
+    def endElement(self, tag):
+        print "endElement..........." + tag
+        # if(tag.strip() == "e:Group"):
+        #     if len(self.depth):
+        #         self.depth.pop()
+        #     else:
+        #         print "1111111111"
+        #     if len(self.depth):
+        #         self.curNode = self.depth[-1]
+        #     else:
+        #         print "2222222222"
+        # else:
+        #     self.curNode = self.parentNode
+
+
+    def endDocument(self):
+        print "endDocument"
+        print self.data
+        # global currentFile
+        # path, filename = os.path.split(currentFile)
+        # fname = os.path.join(path,filename.replace(r".exml",r".json"))
+        #
+        # with open(fname,"w") as f:
+        #     json.dump(self.data,f)
 
 
 
@@ -62,8 +171,8 @@ def walkDir(depth):
             try:
                 if ext == ".json":
                     jsonUnpacker(f,depth)
-                elif ext == ".plist":
-                    plistUnpacker(f, depth)
+                # elif ext == ".plist":
+                #     plistUnpacker(f, depth)
             except Exception,e:
                 print "unpacker error:  " + f
                 raise e
@@ -154,6 +263,19 @@ def plistUnpacker(f, depth):
     :param depth:
     :return:
     """
+
+    print "plistUnpacker:  {}".format(f)
+    parser = xml.sax.make_parser()
+    parser.setFeature(xml.sax.handler.feature_namespaces, 0)
+
+    Handler = ExmlHandler()
+    parser.setContentHandler(Handler)
+
+    fDir = os.path.join(fromDir, *depth)
+    plistFile = os.path.join(fDir, f)
+
+    parser.parse(plistFile)
+
 
 
 def main():
