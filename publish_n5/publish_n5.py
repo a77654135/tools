@@ -285,74 +285,27 @@ def parseIndexHtml():
 
 def parseConfigVersion():
     global releaseDir
+    global updateProgram
+    global updateSkin
+    global updateRes
+    global updateConfig
+    global updateAll
+
     versionFile = os.path.join(releaseDir,*["resource","config_vutimes.json"])
 
     with open(versionFile,"r") as f:
         content = json.load(f)
     # "xml_ver":45, "notice_ver":338, "json_ver":44, "res_ver":47
 
-    if content.has_key("xml_ver"):
+    if content.has_key("xml_ver") and (updateSkin or updateAll):
         content["xml_ver"] += 1
-    if content.has_key("notice_ver"):
-        content["notice_ver"] += 1
-    if content.has_key("json_ver"):
+    if content.has_key("json_ver") and (updateConfig or updateAll):
         content["json_ver"] += 1
-    if content.has_key("res_ver"):
+    if content.has_key("res_ver") and (updateRes or updateAll):
         content["res_ver"] += 1
 
     with open(versionFile,"w") as f:
         json.dump(content,f)
-
-
-
-def restoreFile():
-    '''
-    删除一些不用的文件
-    保留原来的一些文件
-    :return:
-    '''
-    global releaseDir
-    global configData
-
-    for f in os.listdir(os.path.join(releaseDir,"resource")):
-        if f.startswith("config_avu"):
-            os.unlink(os.path.join(releaseDir,*["resource",f]))
-
-    time.sleep(1)
-
-    #恢复原配置
-    if configData.has_key("xml_ver"):
-        if isinstance(configData["xml_ver"],int):
-            configData["xml_ver"] = configData["xml_ver"] + 1
-    if configData.has_key("notice_ver"):
-        if isinstance(configData["notice_ver"],int):
-            configData["notice_ver"] = configData["notice_ver"] + 1
-    if configData.has_key("json_ver"):
-        if isinstance(configData["json_ver"],int):
-            configData["json_ver"] = configData["json_ver"] + 1
-    if configData.has_key("res_ver"):
-        if isinstance(configData["res_ver"],int):
-            configData["res_ver"] = configData["res_ver"] + 1
-
-    # print ""
-    # print configData
-    # print ""
-    with open(os.path.join(releaseDir,*["resource","config_avu.json"]),"w") as f:
-        json.dump(configData,f)
-
-    skin1 = os.path.join(os.path.dirname(releaseDir),"skin.js")
-    skin2 = os.path.join(os.path.dirname(releaseDir),"skin.min.js")
-    if os.path.exists(skin1):
-        shutil.copyfile(skin1,os.path.join(releaseDir,*["resource","skin.js"]))
-    if os.path.exists(skin2):
-        shutil.copyfile(skin2,os.path.join(releaseDir,*["resource","skin.min.js"]))
-
-    print u"恢复原来的配置成功"
-
-
-
-
-
 
 
 
