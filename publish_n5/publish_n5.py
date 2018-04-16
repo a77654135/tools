@@ -19,6 +19,7 @@ import shutil
 import configparser
 import datetime
 import time
+import hashlib
 
 from common.ExceptCallStack import print_call_stack
 from slimit import minify
@@ -36,6 +37,9 @@ updateProgram = True
 updateRes = True
 
 version = ""
+
+mainVer = ""
+skinVer = ""
 
 
 
@@ -183,10 +187,9 @@ def updateSkinOnly():
     global projectDir
     global releaseDir
     global version
+    global skinVer
 
     thmJson = os.path.join(projectDir,*["bin-release","web",version,"resource","default.thm.json"])
-    skinJs = os.path.join(releaseDir,*["resource","skin.js"])
-    skinMinJs = os.path.join(releaseDir,*["resource","skin.min.js"])
 
     with open(thmJson, "r") as f:
         content = json.load(f)
@@ -202,6 +205,11 @@ def updateSkinOnly():
             output += u"var {} = {}".format(className, gjs)
             output += os.linesep
 
+    skinVer = hashlib.md5(output).hexdigest()[:3]
+
+    skinJs = os.path.join(releaseDir, *["resource", "skin.{}.js".format(skinVer)])
+    skinMinJs = os.path.join(releaseDir, *["resource", "skin.{}.min.js".format(skinVer)])
+
     with open(skinJs, "w") as f:
         f.write(output)
 
@@ -210,14 +218,14 @@ def updateSkinOnly():
 
 
     #拷贝skins过去
-    # skinFrom = os.path.join(projectDir,*["resource","skins"])
-    # skinTo = os.path.join(releaseDir,*["resource","skins"])
-    #
-    # if os.path.exists(skinTo):
-    #     shutil.rmtree(skinTo)
-    #     time.sleep(2)
-    # shutil.copytree(skinFrom,skinTo)
-    # time.sleep(2)
+    skinFrom = os.path.join(projectDir,*["resource","skins"])
+    skinTo = os.path.join(releaseDir,*["resource","skins"])
+
+    if os.path.exists(skinTo):
+        shutil.rmtree(skinTo)
+        time.sleep(2)
+    shutil.copytree(skinFrom,skinTo)
+    time.sleep(2)
 
 
 def updateProgramOnly():
@@ -228,10 +236,19 @@ def updateProgramOnly():
     global projectDir
     global releaseDir
     global version
+    global mainVer
 
     mainJs = os.path.join(projectDir, *["bin-release", "web", version, "main.min.js"])
-    toJs = os.path.join(releaseDir, "main.min.js")
 
+    with open(mainJs,"r") as f:
+        content = "".join(f.readlines())
+
+    ver = hashlib.md5(content).hexdigest()
+    mainVer = ver[:5]
+
+    # mainName = "main.{}.min.js".format(mainVer)
+    mainName = "main.min.js"
+    toJs = os.path.join(releaseDir, mainName)
     shutil.copy(mainJs,toJs)
 
 
@@ -262,6 +279,8 @@ def parseIndexHtml():
     '''
     global projectDir
     global releaseDir
+    global mainVer
+    global skinVer
 
     indexFile = os.path.join(releaseDir,"index.html")
 
@@ -276,10 +295,23 @@ def parseIndexHtml():
             l = r'<script>var game_version = "{}";</script>'.format(version)
             l += '\n'
         else:
-            l = line
+            l = line.replace("main.min.js","main.{}.min.js".format(mainVer))
         newlines.append(l)
 
     with open(indexFile,"w") as f:
+        f.writelines(newlines)
+
+    # mainJs = os.path.join(releaseDir, "main.{}.min.js".format(mainVer))
+    mainJs = os.path.join(releaseDir, "main.min.js")
+    with open(mainJs,"r") as f:
+        lines = f.readlines()
+
+    newlines = []
+    for line in lines:
+        l = line.replace("skin.min.js","skin.{}.min.js".format(skinVer))
+        newlines.append(l)
+
+    with open(mainJs,"w") as f:
         f.writelines(newlines)
 
 
