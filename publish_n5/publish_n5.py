@@ -20,6 +20,8 @@ import configparser
 import datetime
 import time
 import hashlib
+import string
+import random
 
 from common.ExceptCallStack import print_call_stack
 from slimit import minify
@@ -178,6 +180,11 @@ def updateResOnly():
 
     minJson(jsonTo)
 
+def getVersion():
+    ver = ""
+    for i in range(0,3):
+        ver += str(random.choice(string.digits))
+    return ver
 
 def updateSkinOnly():
     """
@@ -205,17 +212,24 @@ def updateSkinOnly():
             output += u"var {} = {}".format(className, gjs)
             output += os.linesep
 
-    skinVer = hashlib.md5(output).hexdigest()[:3]
+    # skinVer = hashlib.md5(output).hexdigest()[:3]
+    skinVer = getVersion()
+    skinMinJs = os.path.join(releaseDir, *["resource", "skin{}.min.js".format(skinVer)])
+    while os.path.exists(skinMinJs):
+        skinVer = getVersion()
+        skinMinJs = os.path.join(releaseDir, *["resource", "skin{}.min.js".format(skinVer)])
 
-    skinJs = os.path.join(releaseDir, *["resource", "skin.{}.js".format(skinVer)])
-    skinMinJs = os.path.join(releaseDir, *["resource", "skin.{}.min.js".format(skinVer)])
+    skinJs = os.path.join(releaseDir, *["resource", "skin.js".format(skinVer)])
 
     with open(skinJs, "w") as f:
         f.write(output)
 
-    with open(skinMinJs, "w") as f:
-        f.write(minify(output, mangle=False, mangle_toplevel=True))
-
+    try:
+        with open(skinMinJs, "w") as f:
+            f.write(minify(output, mangle=False, mangle_toplevel=True))
+    except:
+        with open(skinMinJs, "w") as f:
+            f.write(output)
 
     #拷贝skins过去
     skinFrom = os.path.join(projectDir,*["resource","skins"])
@@ -265,9 +279,9 @@ def runPublish():
     version = str(datetime.datetime.now())[:10]
 
     tempDir = os.path.join(projectDir,*[r"bin-release",r"web",version])
-    if os.path.exists(tempDir):
-        shutil.rmtree(tempDir)
-        time.sleep(2)
+    # if os.path.exists(tempDir):
+    #     shutil.rmtree(tempDir)
+    #     time.sleep(2)
 
     os.system(r"egret publish --version {}".format(version))
 
@@ -295,7 +309,8 @@ def parseIndexHtml():
             l = r'<script>var game_version = "{}";</script>'.format(version)
             l += '\n'
         else:
-            l = line.replace("main.min.js","main.{}.min.js".format(mainVer))
+            # l = line.replace("main.min.js","main.{}.min.js".format(mainVer))
+            l = line
         newlines.append(l)
 
     with open(indexFile,"w") as f:
@@ -308,7 +323,7 @@ def parseIndexHtml():
 
     newlines = []
     for line in lines:
-        l = line.replace("skin.min.js","skin.{}.min.js".format(skinVer))
+        l = line.replace("skin.min.js","skin{}.min.js".format(skinVer))
         newlines.append(l)
 
     with open(mainJs,"w") as f:
