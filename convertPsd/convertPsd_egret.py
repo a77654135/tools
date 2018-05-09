@@ -74,23 +74,23 @@ def configParser():
     parser = configparser.ConfigParser()
     parser.read("config.ini",encoding="utf-8")
 
-    psdDir = os.path.abspath(parser.get("default", "psdDir"))
+    psdDir = os.path.abspath(parser.get("egret", "psdDir"))
 
-    generateExml = parser.getboolean("default","generateExml")
-    exmlDir = os.path.abspath(parser.get("default", "exmlDir"))
-    s9File = os.path.abspath(parser.get("default", "s9File"))
-    replaceFile = parser.getboolean("default","replaceFile")
+    generateExml = parser.getboolean("egret","generateExml")
+    exmlDir = os.path.abspath(parser.get("egret", "exmlDir"))
+    s9File = os.path.abspath(parser.get("egret", "s9File"))
+    replaceFile = parser.getboolean("egret","replaceFile")
 
-    generateImg = parser.getboolean("default","generateImg")
-    generateLabelImg = parser.getboolean("default","generateLabelImg")
-    imgDir = os.path.abspath(parser.get("default", "imgDir"))
+    generateImg = parser.getboolean("egret","generateImg")
+    generateLabelImg = parser.getboolean("egret","generateLabelImg")
+    imgDir = os.path.abspath(parser.get("egret", "imgDir"))
 
-    smartSource = parser.getboolean("default","smartSource")
-    defResFile = os.path.abspath(parser.get("default", "defResFile"))
+    smartSource = parser.getboolean("egret","smartSource")
+    defResFile = os.path.abspath(parser.get("egret", "defResFile"))
 
-    exportJson = parser.getboolean("default", "exportJson")
-    minJson = parser.getboolean("default", "minJson")
-    jsonDir = os.path.abspath(parser.get("default", "jsonDir"))
+    exportJson = parser.getboolean("egret", "exportJson")
+    minJson = parser.getboolean("egret", "minJson")
+    jsonDir = os.path.abspath(parser.get("egret", "jsonDir"))
 
 
 def readS9Info():
