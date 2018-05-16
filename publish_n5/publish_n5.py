@@ -148,8 +148,10 @@ def updateResOnly():
     """
     global projectDir
     global releaseDir
+    global testOrPublish
 
     fromDir = os.path.join(projectDir,"resource")
+    # assets = ["assets","notice","web","skins"]
     assets = ["assets","notice","web"]
 
     toDir = os.path.join(releaseDir,"resource")
@@ -219,7 +221,7 @@ def updateSkinOnly():
         skinVer = getVersion()
         skinMinJs = os.path.join(releaseDir, *["resource", "skin{}.min.js".format(skinVer)])
 
-    skinJs = os.path.join(releaseDir, *["resource", "skin.js".format(skinVer)])
+    skinJs = os.path.join(releaseDir, *["resource", "skin.min.js"])
 
     with open(skinJs, "w") as f:
         f.write(output)
@@ -240,6 +242,9 @@ def updateSkinOnly():
         time.sleep(2)
     shutil.copytree(skinFrom,skinTo)
     time.sleep(2)
+
+    #把default.thm.json拷贝过去
+    shutil.copy(thmJson,os.path.join(releaseDir,*["resource","default.thm.json"]))
 
 
 def updateProgramOnly():
