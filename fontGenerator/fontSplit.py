@@ -4,7 +4,10 @@
    File Name：     fontSplit
    @time: 2018/2/15 9:41
    @author: talus
-   @desc: 分割字符图片，要求所有字符在一行上，以保证分割之后字符高度对齐，字体四周要留空白像素
+   @desc: 分割字符图片，要求所有字符在一行上(暂时只支持一行上的字体)，以保证分割之后字符高度对齐，字体四周要留空白像素
+          图片要保存为PNG-24格式
+          图片命名为：fntname_abcdefg.png，用名字做字体区分，名字长度必须和图片里面字符的个数一致   fnt代表字体名字，后面代表每个字符的名字
+          读取config.json文件，替换windows不能命名的字符
 -------------------------------------------------
 """
 
@@ -15,12 +18,14 @@ import os
 import getopt
 import traceback
 import shutil
+import json
 from PIL import Image
 
 
 
 fromDir = ""
 toDir = ""
+globalData = {}
 
 class Rectangle():
     def __init__(self, l=0, t=0, w=1, h=1):
@@ -119,22 +124,59 @@ def getRects(img):
 def parsePng(pngFile,filename):
 
     global toDir
+    global globalData
 
+    filename = filename.split(r".")[0]
     img = Image.open(pngFile)
+    #得到每个字符的位置
     rects = getRects(img)
 
-    dirname = os.path.join(toDir,filename.split(r".")[0])
+    name,chars = filename.split("_")
+    if len(chars) != len(rects):
+        raise Exception(u"字符的个数和图片名字个数不一致！")
+
+    dirname = os.path.join(toDir, "font", name)
+    if os.path.exists(dirname):
+        shutil.rmtree(dirname)
     if not os.path.exists(dirname):
         os.makedirs(dirname)
 
+    # 分割每个字符
     for idx, rect in enumerate(rects):
         im = img.crop((rect.left, rect.top, rect.left + rect.width, rect.top + rect.height))
-        im.save(os.path.join(dirname, "{}.png".format(idx)))
+        im.save(os.path.join(dirname, "{}.png".format(chars[idx])))
+
+    #打包成字体文件
+    os.system('TextureMerger.exe -p {0} -o {0}.fnt'.format(dirname))
+    #删除临时文件
+    shutil.rmtree(dirname)
+    #替换fnt文件中的字符
+    fnt_file = os.path.join(toDir, "font", "{}.fnt".format(name))
+    with open(fnt_file, "r") as f:
+        content = json.load(f)
+
+    frames = content.get("frames", {})
+    newFrames = {}
+    for key in frames:
+        value = frames[key]
+        key = key.replace("_png", "")
+        if key in globalData:
+            key = globalData[key]
+        newFrames[key] = value
+    content["frames"] = newFrames
+
+    with open(fnt_file, "w") as f:
+        json.dump(content, f, indent=4)
+
 
 
 def parse():
     global fromDir
     global toDir
+    global globalData
+
+    with open(os.path.join(os.path.dirname(__file__),'config.json'), "r") as f:
+        globalData = json.load(f)
 
     for f in os.listdir(fromDir):
         if os.path.splitext(f)[1] == ".png":
@@ -168,7 +210,7 @@ def main(argv):
         elif opt in ("-t", "--toDir"):
             toDir = os.path.abspath(arg)
 
-    fromDir = os.path.abspath(r"C:\Users\talus\study\ttt")
+    fromDir = os.path.abspath(r"C:\Users\talus\Desktop\aaa")
 
     if not toDir:
         toDir = fromDir
