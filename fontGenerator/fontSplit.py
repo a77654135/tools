@@ -210,7 +210,7 @@ def main(argv):
         elif opt in ("-t", "--toDir"):
             toDir = os.path.abspath(arg)
 
-    fromDir = os.path.abspath(r"C:\Users\talus\Desktop\aaa")
+    # fromDir = os.path.abspath(r"C:\Users\talus\Desktop\aaa")
 
     if not toDir:
         toDir = fromDir
