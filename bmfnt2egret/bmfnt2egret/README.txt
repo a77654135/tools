@@ -1,0 +1,4 @@
+bmfont工具生成的.fnt文件转换成egret使用的fnt格式文件.
+
+双击bmfnt2egret.exe可以修改当前文件夹下的所有.fnt文件
+可以指定-f参数，可以指定文件夹或者具体的文件
