@@ -64,12 +64,12 @@ class ExmlHandler( xml.sax.ContentHandler):
                 assetsUrl[source] = "openDataContext/assets/{}.png".format(source)
             else:
                 conf["id"] = attr["id"]
-            conf["x"] = attr.get("x", 0)
-            conf["y"] = attr.get("y", 0)
+            conf["x"] = int(attr.get("x", 0))
+            conf["y"] = int(attr.get("y", 0))
             if attr.has_key("width"):
-                conf["width"] = attr["width"]
+                conf["width"] = int(attr["width"])
             if attr.has_key("height"):
-                conf["height"] = attr["height"]
+                conf["height"] = int(attr["height"])
         elif tag.strip() == "e:Label":
             id = attr.get("id", "")
             # label必须有id
@@ -78,21 +78,21 @@ class ExmlHandler( xml.sax.ContentHandler):
             conf["type"] = "label"
             assetsConf.append(conf)
 
-            conf["x"] = attr.get("x", 0)
-            conf["y"] = attr.get("y", 0)
+            conf["x"] = int(attr.get("x", 0))
+            conf["y"] = int(attr.get("y", 0))
             if attr.has_key("width"):
-                conf["width"] = attr["width"]
+                conf["width"] = int(attr["width"])
             if attr.has_key("height"):
-                conf["height"] = attr["height"]
+                conf["height"] = int(attr["height"])
             if attr.has_key("stroke"):
-                conf["stroke"] = attr["stroke"]
+                conf["stroke"] = int(attr["stroke"])
                 conf["strokeColor"] = attr["strokeColor"].replace("0x", "#")
             if attr.has_key("id"):
                 conf["id"] = attr["id"]
             if attr.has_key("textColor"):
                 conf["textColor"] = attr["textColor"]
             if attr.has_key("size"):
-                conf["textSize"] = attr["size"]
+                conf["textSize"] = int(attr["size"])
 
 
     # 元素结束事件处理
