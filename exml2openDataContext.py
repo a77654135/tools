@@ -43,6 +43,7 @@ class ExmlHandler( xml.sax.ContentHandler):
     <e:Label x="36" y="42" width="27" height="33" id="rankLbl" touchEnabled="false" fontFamily="Microsoft YaHei" text="4" size="30" textColor="0x0e6f9c"  anchorOffsetX="0" anchorOffsetY="0"/>
     """
 
+
     # 元素开始事件处理
     def startElement(self, tag, attributes):
         # print "startElement:  " + tag
@@ -151,7 +152,7 @@ def main(argv):
     global assetsUrl
     global assetsConf
     try:
-        exmlFile = os.path.abspath(r"D:\study\work\game_framework\client\resource\skins\game\panel\RankItemRenderSkin.exml")
+        # exmlFile = os.path.abspath(r"D:\study\work\game_framework\client\resource\skins\game\panel\RankItemRenderSkin.exml")
         parseFile(exmlFile)
         with open(os.path.join(os.path.dirname(exmlFile), "index.js"), "w") as f:
 
