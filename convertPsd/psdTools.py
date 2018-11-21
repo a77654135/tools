@@ -28,6 +28,36 @@ from psd_tools import PSDImage,Layer,Group
 logger = getUZWLogger()
 
 
+def getPropValue(obj, keys, defaultValue):
+    """
+    获取一个dict中的key对应的值
+    :param keys:
+    :param defaultValue:
+    :return:
+    """
+    if obj is None:
+        return defaultValue
+
+    data = obj
+    for key in keys.split("."):
+        if type(data) == dict or type(data) == OrderedDict:
+            data = data.get(key, None)
+            if data is None:
+                return defaultValue
+        elif type(data) == list:
+            try:
+                key = int(key)
+                data = data[key]
+            except:
+                return defaultValue
+        elif isinstance(data, object):
+            data = getattr(data, key, None)
+            if data is None:
+                return defaultValue
+        else:
+            return defaultValue
+    return data
+
 def rgbToHex(r,g,b):
     """
     rgb转十六进制
@@ -156,6 +186,38 @@ def parseList(lst):
     else:
         return " ".join(lst)
 
+def getEngineData(layer):
+    """
+    获取原始数据
+    :param layer:
+    :return:
+    """
+    engineData = ""
+    TySh = layer._tagged_blocks["TySh"][9][2]
+    for tp in TySh:
+        if tp[0] == "EngineData":
+            engineData = tp[1][0]
+            break
+    return engineData
+
+def getEngineProp(layer, prop, defaultValue=None):
+    """
+    解析图层原始数据
+    :param layer:
+    :param prop:
+    :param defaultValue:
+    :return:
+    """
+    TySh = layer._tagged_blocks["TySh"][9][2]
+    for tp in TySh:
+        if tp[0] == "EngineData":
+            engineData = tp[1][0]
+            break
+    if isinstance(engineData, str) and engineData != "":
+        ret = re.findall(r"{0}.*?(\d+?).*".format(prop), engineData)
+        print ret
+
+
 def parseEngineData(layer):
     """
     解析图层原始数据
@@ -217,13 +279,14 @@ def parseEngineData(layer):
 def getLabelSize(layer):
     assert isLabel(layer)
     try:
-        ed = parseEngineData(layer)
-        if ed is None:
-            return 18
-        else:
-            return int(ed["EngineDict"]["StyleRun"]["RunArray"]["StyleSheet"]["StyleSheetData"]["FontSize"])
+        # ed = parseEngineData(layer)
+        engineData = getEngineData(layer)
+        ret = re.findall(r"/FontSize (\d+)", engineData)
+        if len(ret):
+            return ret[0]
+        return 24
     except Exception,e:
-        return 18
+        return 24
 
 def getLabelColor(label):
     assert isinstance(label,Layer) and label.text_data is not None

@@ -220,14 +220,14 @@ def configParser():
     imgRoot = os.path.abspath(parser.get("laya", "imgRoot"))
 
     # temp data
-    # psdDir = r"D:\study\work\game_framework\art\psd\love"
-    # generateUi = True
-    # uiDir = r"D:\study\work\game_framework\client_laya\client_laya_2\laya\pages\panel\love"
-    # replaceFile = True
-    # generateImg = True
-    # generateLabelImg = False
-    # imgDir = r"panel"
-    # imgRoot = r"D:\study\work\game_framework\client_laya\client_laya_2\laya\assets"
+    psdDir = r"D:\study\work\game_framework\art\psd\love"
+    generateUi = True
+    uiDir = r"D:\study\work\game_framework\client_laya\client_laya_2\laya\pages\panel\love"
+    replaceFile = True
+    generateImg = True
+    generateLabelImg = False
+    imgDir = r"panel"
+    imgRoot = r"D:\study\work\game_framework\client_laya\client_laya_2\laya\assets"
 
 
 def walkImgDir(path, depth=[]):
