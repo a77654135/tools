@@ -31,7 +31,33 @@ currentDepth = []
 # 图片的缓存
 imgMap = {}
 
+compId = 0;
 
+def getPropValue(obj, keys, defaultValue):
+    """
+    获取一个dict中的key对应的值
+    :param keys:
+    :param defaultValue:
+    :return:
+    """
+    if obj is None or (type(obj) != dict and type(obj) != OrderedDict):
+        return defaultValue
+
+    data = obj
+    for key in keys.split("."):
+        if type(data) == dict or type(obj) == OrderedDict:
+            data = data.get(key, None)
+            if data is None:
+                return defaultValue
+        elif type(data) == list:
+            try:
+                key = int(key)
+                data = data[key]
+            except:
+                return defaultValue
+        else:
+            return defaultValue
+    return data
 
 def getCompId():
     global compId
@@ -52,6 +78,7 @@ def getLayerProp_laya(layer,isButton=False):
     global curPsdName
 
     ret = OrderedDict()
+    # 获取自定义属性
     customProp = getLayerCustomProp(layer)
     x, y, w, h = getLayerSize(layer)
     ret["x"] = x
@@ -90,7 +117,9 @@ def getLayerProp_laya(layer,isButton=False):
             ret["skin"] = imgMap[name]
         else:
             # 导出图片
-            dirList= imgDir.split("/").extend(currentDepth)
+            dirList= imgDir.split("/")
+            dirList.extend(currentDepth)
+            dirList.append(curPsdName.split(".")[0].lower())
             absImgDir = os.path.join(os.path.abspath(imgRoot), *dirList)
             if not os.path.exists(absImgDir):
                 os.makedirs(absImgDir)
@@ -106,13 +135,19 @@ def getLayerProp_laya(layer,isButton=False):
     elif isButton:
         layer = layer.layers[0]
         name = getLayerName(layer)
-        global imgMap
+        x, y, w, h = getLayerSize(layer)
+        ret["width"] = w
+        ret["height"] = h
+        ret["stateNum"] = 1
+
         if name in imgMap:
             # 资源中有图片
             ret["skin"] = imgMap[name]
         else:
             # 导出图片
-            dirList = imgDir.split("/").extend(currentDepth)
+            dirList = imgDir.split("/")
+            dirList.extend(currentDepth)
+            dirList.append(curPsdName.split(".")[0].lower())
             absImgDir = os.path.join(os.path.abspath(imgRoot), *dirList)
             if not os.path.exists(absImgDir):
                 os.makedirs(absImgDir)
@@ -137,7 +172,7 @@ def getLayerProp_laya(layer,isButton=False):
     elif isLabel(layer):
         tp = "Label"
     elif isButton:
-        tp = "ScaleButton"
+        tp = "Button"
     else:
         tp = "Image"
 
@@ -151,6 +186,7 @@ def getLayerProp_laya(layer,isButton=False):
     result["type"] = tp
     result["props"] = ret
     result["label"] = label
+    result["compId"] = getCompId()
 
     return result
 
@@ -169,7 +205,8 @@ def configParser():
     global replaceFile
 
     parser = configparser.ConfigParser()
-    parser.read("config.ini",encoding="utf-8")
+    configFile = os.path.abspath(os.path.join(os.path.dirname(__file__), "config.ini"))
+    parser.read(configFile, encoding="utf-8")
 
     psdDir = os.path.abspath(parser.get("laya", "psdDir"))
 
@@ -183,14 +220,14 @@ def configParser():
     imgRoot = os.path.abspath(parser.get("laya", "imgRoot"))
 
     # temp data
-    psdDir = r"D:\study\work\game_framework\art\psd\love"
-    generateUi = True
-    uiDir = r"D:\study\work\game_framework\client_laya\client_laya_2\laya\pages\panel"
-    replaceFile = True
-    generateImg = True
-    generateLabelImg = False
-    imgDir = r"panel"
-    imgRoot = r"D:\study\work\game_framework\client_laya\client_laya_2\laya\assets"
+    # psdDir = r"D:\study\work\game_framework\art\psd\love"
+    # generateUi = True
+    # uiDir = r"D:\study\work\game_framework\client_laya\client_laya_2\laya\pages\panel\love"
+    # replaceFile = True
+    # generateImg = True
+    # generateLabelImg = False
+    # imgDir = r"panel"
+    # imgRoot = r"D:\study\work\game_framework\client_laya\client_laya_2\laya\assets"
 
 
 def walkImgDir(path, depth=[]):
@@ -260,8 +297,8 @@ def parsePsd(fromFile,depth):
 
     if generateUi:
         psdToUi(fromFile,depth)
-    if generateImg:
-        psdToImg(fromFile,depth)
+    # if generateImg:
+    #     psdToImg(fromFile,depth)
 
 def psdToUi(fromFile,depth):
     """
@@ -383,7 +420,28 @@ def ButtonGroupToJson(layer,content):
     """
 
     prop = getLayerProp_laya(layer,True)
-    prop["child"] = []
+    prop["props"]["x"] -= getPropValue(content, "props.x", 0)
+    prop["props"]["y"] -= getPropValue(content, "props.y", 0)
+    prop["props"]["x"] += int(prop["props"]["width"]/2)
+    prop["props"]["y"] += int(prop["props"]["height"]/2)
+    prop["props"]["anchorX"] = prop["props"]["anchorY"] = 0.5
+    prop["child"] = [
+                {
+                    "type":"Script",
+                    "switchAble":True,
+                    "source":"src/common/component/ScaleButton.ts",
+                    "searchKey":"Script,ScaleButton",
+                    "removeAble":True,
+                    "props":{},
+                    "nodeParent":prop["compId"],
+                    "label":"ScaleButton",
+                    "isDirectory":False,
+                    "isAniNode":True,
+                    "hasChild":False,
+                    "compId":getCompId(),
+                    "child":[
+                        ]
+                }]
     # propProcess(prop)
     content["child"].append(prop)
 
@@ -407,10 +465,9 @@ def ButtonGroupToJson(layer,content):
 def normalGroupToJson(group, content):
     prop = getLayerProp_laya(group)
 
-    prop["props"]["x"] = 0
-    prop["props"]["y"] = 0
-    prop["props"]["width"] = curContent["props"]["width"]
-    prop["props"]["height"] = curContent["props"]["height"]
+    prop["props"]["x"] -= getPropValue(content, "props.x", 0)
+    prop["props"]["y"] -= getPropValue(content, "props.y", 0)
+
     prop["nodeParent"] = curContent["compId"]
     prop["isOpen"] = True
     prop["isDirectory"] = True
@@ -422,6 +479,7 @@ def normalGroupToJson(group, content):
     content["child"].append(prop)
 
     layers = group.layers
+    layers.reverse()
     if len(layers):
         for layer in layers:
             if isLayerLocked(layer):
@@ -434,7 +492,7 @@ def normalGroupToJson(group, content):
         prop["hasChild"] = False
 
 
-def layerToJson(layer,content):
+def layerToJson(layer, content):
     """
     图层转换成json对象
     :param layer:
@@ -442,6 +500,9 @@ def layerToJson(layer,content):
     :return:
     """
     prop = getLayerProp_laya(layer)
+
+    prop["props"]["x"] -= getPropValue(content, "props.x", 0)
+    prop["props"]["y"] -= getPropValue(content, "props.y", 0)
 
     prop["nodeParent"] = curContent["compId"]
     prop["isOpen"] = True
@@ -455,33 +516,14 @@ def layerToJson(layer,content):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 def main():
     try:
         global imgRoot
         global imgMap
         configParser()
         walkImgDir(imgRoot, [])
-        print imgMap
-
+        # print imgMap
+        walkPsdDir([])
         # walkDir([])
     except Exception,e:
         print_call_stack()
